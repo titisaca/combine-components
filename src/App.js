@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import ConsoleOutput from './ConsoleOutput';
+// import ConsoleOutput from './ConsoleOutput';
 import './App.css';
-
+import FaceApiLoader from './FaceApiLoader';
+import WebGazeLoader from './WebGazerLoader';
 const App = () => {
   const [loggedData, setLogData] = useState([]);
   const containerRef = useRef(null);
   const [isLogging, setIsLogging] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState('');
+  const [webGazeContext, setWebGazeContext] = useState({ x: -1, y: -1 });
 
   useEffect(() => {
     if (
@@ -43,38 +45,53 @@ const App = () => {
       containerRef.current.addEventListener('touchend', handleTouchEnd, { once: true });
     }
   };
+// ...
 
-  const logSensorData = () => {
-    if (isLogging) {
-      setIsLogging(false);
-      return;
-    }
+const logSensorData = () => {
+  if (isLogging) {
+    setIsLogging(false);
+    return;
+  }
 
-    setIsLogging(true);
+  setIsLogging(true);
 
-    const logData = (event) => {
-      const accelerometerData = event.accelerationIncludingGravity;
-      const gyroscopeData = event.rotationRate;
-      const motionEvent = {
-        timestamp: new Date(),
-        type: 'motion',
-        acceleration: accelerometerData,
-        rotationRate: gyroscopeData,
-      };
+  const logData = (event) => {
+    const accelerometerData = event.accelerationIncludingGravity;
+    const gyroscopeData = event.rotationRate;
 
-      handleEvent(motionEvent);
+    // Format the timestamp with 3 decimal places for milliseconds
+    const timestamp = new Date().toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      fractionalSecondDigits: 3, // 3 decimal places for milliseconds
+    });
 
-      if (isLogging) {
-        // Request the next animation frame to continue logging
-        window.requestAnimationFrame(logData);
-      }
+    const motionEvent = {
+      timestamp: timestamp,
+      type: 'motion',
+      acceleration: accelerometerData,
+      rotationRate: gyroscopeData,
     };
 
-    if (permissionStatus === 'granted') {
-      // Start logging when permission is granted
-      window.addEventListener('devicemotion', logData);
+    handleEvent(motionEvent);
+
+    if (isLogging) {
+      // Request the next animation frame to continue logging
+      window.requestAnimationFrame(logData);
     }
   };
+
+  if (permissionStatus === 'granted') {
+    // Start logging when permission is granted
+    window.addEventListener('devicemotion', logData);
+  }
+};
+
+// ...
 
   const requestDeviceMotionAccess = () => {
     if (
@@ -93,17 +110,36 @@ const App = () => {
     if (loggedData.length === 0) {
       return;
     }
-
+  
+    const csvRows = [];
     const columnNames = 'Timestamp,Event Type,X,Y,Duration,Acceleration_X,Acceleration_Y,Acceleration_Z,Gyroscope_Alpha,Gyroscope_Beta,Gyroscope_Gamma';
-    const csvContent = `${columnNames}\n${loggedData.map((event) => {
-      if (event.type === 'touch') {
-        return `${event.timestamp},touch,${event.x},${event.y},${event.duration},,,,,,`;
-      } else if (event.type === 'motion') {
-        return `${event.timestamp},motion,,,,${event.acceleration.x},${event.acceleration.y},${event.acceleration.z},${event.rotationRate.alpha},${event.rotationRate.beta},${event.rotationRate.gamma}`;
+  
+    csvRows.push(columnNames);
+  
+    loggedData.forEach((event) => {
+      const timestamp = new Date(event.timestamp).toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        fractionalSecondDigits: 3, // 3 decimal places for milliseconds
+      });
+  
+      const eventType = event.type;
+  
+      let row = `"${timestamp}",${eventType},${event.x},${event.y},${event.duration},"","","","","",""`;
+  
+      if (event.type === 'motion') {
+        row = `"${timestamp}",${eventType},${event.x},${event.y},${event.duration},${event.acceleration.x},${event.acceleration.y},${event.acceleration.z},${event.rotationRate.alpha},${event.rotationRate.beta},${event.rotationRate.gamma}`;
       }
-      return '';
-    }).join('\n')}`;
-
+  
+      csvRows.push(row);
+    });
+  
+    const csvContent = csvRows.join('\n');
+  
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -112,6 +148,10 @@ const App = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+  
+  const updateWebGazeContext = (data) => {
+    setWebGazeContext(data);
   };
 
   return (
@@ -140,7 +180,7 @@ const App = () => {
       >
         Export to CSV
       </button>
-      <ConsoleOutput loggedData={loggedData} />
+      {/* <ConsoleOutput loggedData={loggedData} /> */}
       <h1>Accelerometer and Gyroscope Demo</h1>
       <button
         id="start_demo"
@@ -167,6 +207,21 @@ const App = () => {
           Permission status: Denied. Enable motion and orientation access in your browser settings.
         </p>
       )}
+
+<main>
+        {/* FaceAPI.js component */}
+        <FaceApiLoader />
+
+        {/* WebGazer.js component */}
+        <WebGazeLoader onUpdateContext={updateWebGazeContext} />
+        {/* Display webGazeContext data */}
+        <div>
+          <h3>WebGazer.js Data</h3>
+          <p>X: {webGazeContext.x}</p>
+          <p>Y: {webGazeContext.y}</p>
+        </div>
+      </main>
+
     </div>
   );
 };
