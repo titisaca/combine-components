@@ -1,14 +1,21 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 // import ConsoleOutput from './ConsoleOutput';
 import './App.css';
 import FaceApiLoader from './FaceApiLoader';
 import WebGazeLoader from './WebGazerLoader';
+import VideoStream from './VideoStream';
+
 const App = () => {
   const [loggedData, setLogData] = useState([]);
   const containerRef = useRef(null);
   const [isLogging, setIsLogging] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState('');
-  const [webGazeContext, setWebGazeContext] = useState({ x: -1, y: -1 });
+  
+  const [stream, setStream] = useState(null);
+
+  const handleStream = useCallback((stream) => {
+    setStream(stream);
+  }, []);
 
   useEffect(() => {
     if (
@@ -47,51 +54,47 @@ const App = () => {
   };
 // ...
 
-const logSensorData = () => {
-  if (isLogging) {
-    setIsLogging(false);
-    return;
-  }
+  const logSensorData = () => {
+    if (isLogging) {
+      setIsLogging(false);
+      return;
+    }
 
-  setIsLogging(true);
+    setIsLogging(true);
 
-  const logData = (event) => {
-    const accelerometerData = event.accelerationIncludingGravity;
-    const gyroscopeData = event.rotationRate;
+    const logData = (event) => {
+      const accelerometerData = event.accelerationIncludingGravity;
+      const gyroscopeData = event.rotationRate;
 
-    // Format the timestamp with 3 decimal places for milliseconds
-    const timestamp = new Date().toLocaleString(undefined, {
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      second: 'numeric',
-      fractionalSecondDigits: 3, // 3 decimal places for milliseconds
-    });
+      // Format the timestamp with 3 decimal places for milliseconds
+      const timestamp = new Date().toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        fractionalSecondDigits: 3,
+      });
 
-    const motionEvent = {
-      timestamp: timestamp,
-      type: 'motion',
-      acceleration: accelerometerData,
-      rotationRate: gyroscopeData,
+      const motionEvent = {
+        timestamp: timestamp,
+        type: 'motion',
+        acceleration: accelerometerData,
+        rotationRate: gyroscopeData,
+      };
+
+      handleEvent(motionEvent);
+
+      if (isLogging) {
+        window.requestAnimationFrame(logData);
+      }
     };
 
-    handleEvent(motionEvent);
-
-    if (isLogging) {
-      // Request the next animation frame to continue logging
-      window.requestAnimationFrame(logData);
+    if (permissionStatus === 'granted') {
+      window.addEventListener('devicemotion', logData);
     }
   };
-
-  if (permissionStatus === 'granted') {
-    // Start logging when permission is granted
-    window.addEventListener('devicemotion', logData);
-  }
-};
-
-// ...
 
   const requestDeviceMotionAccess = () => {
     if (
@@ -124,7 +127,7 @@ const logSensorData = () => {
         hour: 'numeric',
         minute: 'numeric',
         second: 'numeric',
-        fractionalSecondDigits: 3, // 3 decimal places for milliseconds
+        fractionalSecondDigits: 3,
       });
   
       const eventType = event.type;
@@ -150,10 +153,6 @@ const logSensorData = () => {
     document.body.removeChild(link);
   };
   
-  const updateWebGazeContext = (data) => {
-    setWebGazeContext(data);
-  };
-
   return (
     <div>
       <div
@@ -168,26 +167,24 @@ const logSensorData = () => {
         }}
         onTouchStart={handleTouchStart}
       ></div>
-      {/* Button integrated into the touch area */}
       <button
         className="export-button"
         style={{
           position: 'absolute',
-          bottom: '10px', // Adjust the position as needed
+          bottom: '10px',
           left: '10px',
         }}
         onClick={exportToCSV}
       >
         Export to CSV
       </button>
-      {/* <ConsoleOutput loggedData={loggedData} /> */}
       <h1>Accelerometer and Gyroscope Demo</h1>
       <button
         id="start_demo"
         className={`btn ${isLogging ? 'btn-danger' : 'btn-success'}`}
         style={{
           position: 'absolute',
-          bottom: '10px', // Adjust the position as needed
+          bottom: '10px',
           left: '300px',
         }}
         onClick={logSensorData}
@@ -199,7 +196,7 @@ const logSensorData = () => {
       ) : permissionStatus === 'pending' ? (
         <button style={{
           position: 'absolute',
-          bottom: '10px', // Adjust the position as needed
+          bottom: '10px',
           left: '100px',
         }} onClick={requestDeviceMotionAccess}>Request Device Motion Access</button>
       ) : (
@@ -208,19 +205,12 @@ const logSensorData = () => {
         </p>
       )}
 
-<main>
-        {/* FaceAPI.js component */}
-        <FaceApiLoader />
+      <VideoStream onStream={handleStream} />
 
-        {/* WebGazer.js component */}
-        <WebGazeLoader onUpdateContext={updateWebGazeContext} />
-        {/* Display webGazeContext data */}
-        <div>
-          <h3>WebGazer.js Data</h3>
-          <p>X: {webGazeContext.x}</p>
-          <p>Y: {webGazeContext.y}</p>
-        </div>
-      </main>
+      <main>
+        <FaceApiLoader videoStream={stream} />
+        <WebGazeLoader videoStream={stream} />
+</main>
 
     </div>
   );

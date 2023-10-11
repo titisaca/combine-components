@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-const FaceApiLoader = () => {
+const FaceApiLoader = ({ videoStream }) => {
     const [faceExpressionData, setFaceExpressionData] = useState([]);
     const [exportedCSVData, setExportedCSVData] = useState('');
     const [collectingData, setCollectingData] = useState(false);
@@ -51,7 +51,11 @@ const FaceApiLoader = () => {
         ]);
 
         console.log('Models loaded.');
-
+        if (videoStream && videoElement) {
+          // Set the video source to the shared video stream
+          videoElement.srcObject = videoStream;
+        }
+    
         // Access the webcam and start tracking facial expressions
         videoElement = document.getElementById('video');
 
@@ -125,7 +129,7 @@ const FaceApiLoader = () => {
     };
 
     loadFaceApi();
-  }, []);
+  }, [videoStream]);
   const startDataCollection = () => {
     setCollectingData(true);
     setFaceExpressionData([]); // Clear existing data when starting
