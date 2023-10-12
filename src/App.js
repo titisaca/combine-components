@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 // import ConsoleOutput from './ConsoleOutput';
 import './App.css';
 import FaceApiLoader from './FaceApiLoader';
-import WebGazeLoader from './WebGazerLoader';
+// import WebGazeLoader from './WebGazerLoader';
 import VideoStream from './VideoStream';
 
 const App = () => {
@@ -209,7 +209,7 @@ const App = () => {
 
       <main>
         <FaceApiLoader videoStream={stream} />
-        <WebGazeLoader videoStream={stream} />
+        {/* <WebGazeLoader videoStream={stream} /> */}
 </main>
 
     </div>
