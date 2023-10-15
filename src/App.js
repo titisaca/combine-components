@@ -1,22 +1,72 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect,  } from 'react';
 // import ConsoleOutput from './ConsoleOutput';
 import './App.css';
-import FaceApiLoader from './FaceApiLoader';
+// import FaceApiLoader from './FaceApiLoader';
 // import WebGazeLoader from './WebGazerLoader';
-import VideoStream from './VideoStream';
+// import VideoStream from './VideoStream';
+import FaceAndGazeTracker from './FaceAndGazeTracker'; // Import the FaceAndGazeTracker component here
+// import Parent from "./Parent";
 
 const App = () => {
   const [loggedData, setLogData] = useState([]);
   const containerRef = useRef(null);
   const [isLogging, setIsLogging] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState('');
+  // const [videoStream, setVideoStream] = useState(null);
+  const [gazeData, setGazeData] = useState({ x: -1, y: -1 });
+  // const [ setExportedGazeCSVData] = useState('');
+
+  // const [stream, setStream] = useState(null);
+
+  // const handleStream = useCallback((stream) => {
+  //   setVideoStream(stream);
+  // }, []);
+  const updateGazeData = (gazeData) => {
+    setGazeData(gazeData);
+  };
   
-  const [stream, setStream] = useState(null);
+  const exportGazeDataToCSV = () => {
+    if (gazeData.x === -1 || gazeData.y === -1) {
+      return;
+    }
 
-  const handleStream = useCallback((stream) => {
-    setStream(stream);
-  }, []);
 
+    const csvRows2 = [];
+    const columnNames = 'Timestamp, x, y';
+    csvRows2.push(columnNames);
+  
+    loggedData.forEach((gazeData) => {
+      const timestamp = new Date(gazeData.timestamp).toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        fractionalSecondDigits: 3,
+      });
+  
+      // const eventType = event.type;
+      const row2 = `${timestamp},${gazeData.x},${gazeData.y}`;
+
+  
+      csvRows2.push(row2);
+    });
+  
+    const gazeCsvContent = csvRows2.join('\n');
+
+    // const gazeCsvContent = `Timestamp,X,Y\n${gazeData.timestamp},${gazeData.x},${gazeData.y}`;
+    // setExportedGazeCSVData(gazeCsvContent);
+
+    const gazeBlob = new Blob([gazeCsvContent], { type: 'text/csv;charset=utf-8;' });
+    const gazeUrl = URL.createObjectURL(gazeBlob);
+    const gazeLink = document.createElement('a');
+    gazeLink.href = gazeUrl;
+    gazeLink.download = 'gaze_data.csv';
+    gazeLink.click();
+    URL.revokeObjectURL(gazeUrl);
+  };
+  
   useEffect(() => {
     if (
       'DeviceMotionEvent' in window &&
@@ -158,7 +208,7 @@ const App = () => {
       <div
         ref={containerRef}
         style={{
-          width: '100%',
+          width: '100%',  
           height: '100%',
           position: 'fixed',
           top: 0,
@@ -177,6 +227,17 @@ const App = () => {
         onClick={exportToCSV}
       >
         Export to CSV
+      </button>
+      <button
+        className="export-button"
+        style={{
+          position: 'absolute',
+          bottom: '200px',
+          left: '10px',
+        }}
+        onClick={exportGazeDataToCSV}
+      >
+        Export to CSV gaze
       </button>
       <h1>Accelerometer and Gyroscope Demo</h1>
       <button
@@ -205,11 +266,14 @@ const App = () => {
         </p>
       )}
 
-      <VideoStream onStream={handleStream} />
-
+      {/* <VideoStream onStream={handleStream} /> */}
+      {/* <VideoStream onStream={handleStream} />
+      <FaceAndGazeTracker videoStream={videoStream} /> */}
       <main>
-        <FaceApiLoader videoStream={stream} />
-        {/* <WebGazeLoader videoStream={stream} /> */}
+        {/* <FaceApiLoader videoStream={stream} />
+        <WebGazeLoader videoStream={stream} /> */}
+<FaceAndGazeTracker gazeData={gazeData} onGazeDataUpdate={updateGazeData} />
+
 </main>
 
     </div>
