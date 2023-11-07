@@ -15,12 +15,58 @@ const App = () => {
   // const [videoStream, setVideoStream] = useState(null);
   const [gazeData, setGazeData] = useState({ x: -1, y: -1 });
   // const [ setExportedGazeCSVData] = useState('');
+  const [faceExpressionData, setFaceExpressionData] = useState([]);
+  const [isExporting, setIsExporting] = useState(false);
 
   // const [stream, setStream] = useState(null);
 
   // const handleStream = useCallback((stream) => {
   //   setVideoStream(stream);
   // }, []);
+
+  const exportFaceDataToCSV = () => {
+    if (faceExpressionData.length === 0 || isExporting) {
+      return;
+    }
+
+    setIsExporting(true);
+
+    const csvRows = [];
+    const columnNames = 'Date, Time, Happy, Sad, Surprised, Neutral, Fearful, Disgusted, Angry, X, Y';
+
+    csvRows.push(columnNames);
+
+    faceExpressionData.forEach((expression) => {
+      const timestamp = new Date(expression.timestamp).toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        fractionalSecondDigits: 3,
+      });
+
+      const row = `"${timestamp}", ${expression.happy.toFixed(2)}, ${expression.sad.toFixed(2)}, ${expression.surprised.toFixed(2)}, ${expression.neutral.toFixed(2)}, ${expression.fearful.toFixed(2)}, ${expression.disgusted.toFixed(2)}, ${expression.angry.toFixed(2)}, ${gazeData.x.toFixed(2)}, ${gazeData.y.toFixed(2)}`;
+      csvRows.push(row);
+    });
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'face_expression_data.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setIsExporting(false); // Reset the isExporting state
+
+  };
+
+
+
   const updateGazeData = (gazeData) => {
     setGazeData(gazeData);
   };
@@ -221,12 +267,19 @@ const App = () => {
         className="export-button"
         style={{
           position: 'absolute',
-          bottom: '10px',
+          bottom: '300px',
           left: '10px',
         }}
         onClick={exportToCSV}
       >
         Export to CSV
+      </button>
+      <button
+        className="export-button"
+        onClick={exportFaceDataToCSV}
+        disabled={!faceExpressionData.length || isExporting}
+      >
+        Export Face Expression Data to CSV
       </button>
       <button
         className="export-button"
@@ -272,7 +325,8 @@ const App = () => {
       <main>
         {/* <FaceApiLoader videoStream={stream} />
         <WebGazeLoader videoStream={stream} /> */}
-<FaceAndGazeTracker gazeData={gazeData} onGazeDataUpdate={updateGazeData} />
+<FaceAndGazeTracker gazeData={gazeData} onGazeDataUpdate={updateGazeData} faceExpressionData={faceExpressionData}
+        onFaceExpressionDataUpdate={setFaceExpressionData}/>
 
 </main>
 
