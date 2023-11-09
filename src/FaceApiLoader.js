@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 
-const FaceApiLoader = ({ videoStream }) => {
-    const [faceExpressionData, setFaceExpressionData] = useState([]);
-    const [exportedCSVData, setExportedCSVData] = useState('');
-    const [collectingData, setCollectingData] = useState(false);
-    const [exportButtonDisabled, setExportButtonDisabled] = useState(true);
+const FaceApiLoader = ({videoStream}) => {
+  const [ setFaceExpressionData] = useState([]);
+
+
 
   useEffect(() => {
     let videoWidth, videoHeight, canvas, videoElement;
@@ -51,13 +50,10 @@ const FaceApiLoader = ({ videoStream }) => {
         ]);
 
         console.log('Models loaded.');
-        if (videoStream && videoElement) {
-          // Set the video source to the shared video stream
-          videoElement.srcObject = videoStream;
-        }
-    
+
         // Access the webcam and start tracking facial expressions
         videoElement = document.getElementById('video');
+        videoElement.srcObject = videoStream; // Set the provided video stream
 
         // Wait for the video's metadata to be loaded
         videoElement.addEventListener('loadedmetadata', () => {
@@ -104,10 +100,17 @@ const FaceApiLoader = ({ videoStream }) => {
                 window.faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
                 window.faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
 
-                // Log face expression data to the console
+                // Log face expression data to the console and update state
                 if (detections.length > 0) {
                   const expressionData = detections[0].expressions;
                   console.log('Face Expressions:', expressionData);
+                  setFaceExpressionData((prevData) => [
+                    ...prevData,
+                    {
+                      timestamp: new Date().toLocaleDateString(),
+                      ...expressionData,
+                    },
+                  ]);
                 }
               }
             }, 100);
@@ -129,75 +132,19 @@ const FaceApiLoader = ({ videoStream }) => {
     };
 
     loadFaceApi();
-  }, [videoStream]);
-  const startDataCollection = () => {
-    setCollectingData(true);
-    setFaceExpressionData([]); // Clear existing data when starting
-    setExportButtonDisabled(true); // Disable export button when collecting data
-  };
-
-  const stopDataCollection = () => {
-    setCollectingData(false);
-    setExportButtonDisabled(false); // Enable export button when data collection stops
-  };
-
-  const exportExpressionDataToCSV = () => {
-    if (faceExpressionData.length === 0) {
-      return;
-    }
-
-    const columnNames = 'Date, Time, Happy, Sad, Surprised, Neutral, Fearful, Disgusted, Angry';
-    const csvRows = faceExpressionData.map((entry) => [
-      entry.timestamp,
-      entry.happy.toFixed(2),
-      entry.sad.toFixed(2),
-      entry.surprised.toFixed(2),
-      entry.neutral.toFixed(2),
-      entry.fearful.toFixed(2),
-      entry.disgusted.toFixed(2),
-      entry.angry.toFixed(2),
-    ]);
-
-    const updatedCsvContent = [columnNames, ...csvRows.map((row) => row.join(','))].join('\n');
-    setExportedCSVData(updatedCsvContent);
-
-    // Create a Blob and trigger the download
-    const blob = new Blob([updatedCsvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'expression_data.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  }, [setFaceExpressionData, videoStream]);
 
   return (
     <div>
       <h2>FaceAPI.js Live Facial Expression Tracking</h2>
       <video id="video" autoPlay muted playsInline />
       <canvas id="canvas" />
-
-      {/* Display the expression data in a table */}
-      <h3>Expression Data</h3>
-      <button onClick={startDataCollection} disabled={collectingData}>
-        Start Data Collection
-      </button>
-      <button onClick={stopDataCollection} disabled={!collectingData}>
-        Stop Data Collection
-      </button>
-      <button onClick={exportExpressionDataToCSV} disabled={exportButtonDisabled}>
-        Export Expression Data to CSV
-      </button>
-
-      {/* Display exported CSV data */}
-      {exportedCSVData && (
-        <div>
-          <h3>Exported CSV Data</h3>
-          <textarea rows="10" cols="50" readOnly value={exportedCSVData} />
-        </div>
-      )}
     </div>
   );
 };
 
 export default FaceApiLoader;
+
+
+
+

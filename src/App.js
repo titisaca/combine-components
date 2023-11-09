@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 // import ConsoleOutput from './ConsoleOutput';
 import './App.css';
 import FaceApiLoader from './FaceApiLoader';
-// import WebGazeLoader from './WebGazerLoader';
+import WebGazerLoader from './WebGazerLoader';
 import VideoStream from './VideoStream';
 
 const App = () => {
@@ -10,11 +10,20 @@ const App = () => {
   const containerRef = useRef(null);
   const [isLogging, setIsLogging] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState('');
-  
+
   const [stream, setStream] = useState(null);
 
   const handleStream = useCallback((stream) => {
-    setStream(stream);
+    // // Clone the original stream to create a new, independent stream for FaceApiLoader
+    const clonedStreamForFaceApi = stream.clone();
+
+    // Clone the original stream to create a new, independent stream for WebGazerLoader
+    const clonedStreamForWebGazer = stream.clone();
+
+    // Set the cloned streams for the respective components
+    setStream({ faceApiStream: clonedStreamForFaceApi, webGazerStream: clonedStreamForWebGazer });
+    // setStream(stream);
+
   }, []);
 
   useEffect(() => {
@@ -52,7 +61,7 @@ const App = () => {
       containerRef.current.addEventListener('touchend', handleTouchEnd, { once: true });
     }
   };
-// ...
+  // ...
 
   const logSensorData = () => {
     if (isLogging) {
@@ -113,12 +122,12 @@ const App = () => {
     if (loggedData.length === 0) {
       return;
     }
-  
+
     const csvRows = [];
     const columnNames = 'Timestamp,Event Type,X,Y,Duration,Acceleration_X,Acceleration_Y,Acceleration_Z,Gyroscope_Alpha,Gyroscope_Beta,Gyroscope_Gamma';
-  
+
     csvRows.push(columnNames);
-  
+
     loggedData.forEach((event) => {
       const timestamp = new Date(event.timestamp).toLocaleString(undefined, {
         year: 'numeric',
@@ -129,20 +138,20 @@ const App = () => {
         second: 'numeric',
         fractionalSecondDigits: 3,
       });
-  
+
       const eventType = event.type;
-  
+
       let row = `"${timestamp}",${eventType},${event.x},${event.y},${event.duration},"","","","","",""`;
-  
+
       if (event.type === 'motion') {
         row = `"${timestamp}",${eventType},${event.x},${event.y},${event.duration},${event.acceleration.x},${event.acceleration.y},${event.acceleration.z},${event.rotationRate.alpha},${event.rotationRate.beta},${event.rotationRate.gamma}`;
       }
-  
+
       csvRows.push(row);
     });
-  
+
     const csvContent = csvRows.join('\n');
-  
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -152,7 +161,7 @@ const App = () => {
     link.click();
     document.body.removeChild(link);
   };
-  
+
   return (
     <div>
       <div
@@ -208,9 +217,14 @@ const App = () => {
       <VideoStream onStream={handleStream} />
 
       <main>
-        <FaceApiLoader videoStream={stream} />
-        {/* <WebGazeLoader videoStream={stream} /> */}
-</main>
+
+        {stream && (<>
+          <FaceApiLoader videoStream={stream.faceApiStream} />
+          <WebGazerLoader videoStream={stream.webGazerStream} />
+        </>)}
+
+
+      </main>
 
     </div>
   );

@@ -1,65 +1,55 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 
-const WebGazeLoader = ({ videoStream, onUpdateContext }) => {
-  const [context, setContext] = useState({ x: -1, y: -1 });
-  // const [calibrationNeeded, setCalibrationNeeded] = useState(true);
-
+const WebGazerLoader = ({ videoStream }) => {
   useEffect(() => {
-    // Load the WebGazer.js script
-    const handleScriptLoad = () => {
-      if (typeof window.webgazer !== 'undefined') {
-        window.webgazer
-          .setGazeListener((data, elapsedTime) => {
-            if (data == null) {
-              return;
-            }
-            setContext(window.webgazer.util.bound(data));
-          })
-          .begin();
-      } else {
-        console.error('WebGazer is not defined. The script may not have loaded correctly.');
-      }
-    };
+    async function setupWebGazer() {
+      // Load the WebGazer.js script
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://webgazer.cs.brown.edu/webgazer.js';
+        script.async = true;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
 
-    // Handle script load error
-    const handleScriptError = () => {
-      console.log('Error loading WebGazer.js script');
-    };
+      // Initialize WebGazer
+      window.webgazer.setGazeListener(function (data, elapsedTime) {
+        if (data == null) {
+          return;
+        }
+        // Handle gaze data
+        const gazeX = data.x;
+        const gazeY = data.y;
+        console.log(`Gaze coordinates: X=${gazeX}, Y=${gazeY}`);
 
-    // Load the WebGazer.js script
-    const script = document.createElement('script');
-    script.src = 'https://webgazer.cs.brown.edu/webgazer.js';
-    script.async = true;
-    script.onload = handleScriptLoad;
-    script.onerror = handleScriptError;
-    document.head.appendChild(script);
+        // Display gaze coordinates on the screen (for demonstration)
+        const gazeDiv = document.getElementById('gaze-coordinates');
+        gazeDiv.textContent = `Gaze coordinates: X=${gazeX}, Y=${gazeY}`;
+      }).begin();
 
-    return () => {
-      if (window.webgazer) {
-        window.webgazer.end();
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (videoStream) {
-      const videoElement = document.getElementById('video');
-
-      if (videoElement) {
+      if (videoStream) {
+        const videoElement = document.getElementById('webgazerVideoFeed');
         videoElement.srcObject = videoStream;
       }
     }
+
+    // Call the setupWebGazer function to initialize WebGazer
+    setupWebGazer();
+
+    // Check for media devices support
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.error('getUserMedia is not supported in this browser');
+      return;
+    }
+
   }, [videoStream]);
 
   return (
     <div>
-      <div>
-        <h3>WebGazer.js Data</h3>
-        <p>X: {context.x}</p>
-        <p>Y: {context.y}</p>
-      </div>
+      <div id="gaze-coordinates" style={{ position: 'absolute', top: '10px', left: '10px' }}></div>
     </div>
   );
 };
 
-export default WebGazeLoader;
+export default WebGazerLoader;

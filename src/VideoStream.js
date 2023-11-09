@@ -28,6 +28,7 @@ const VideoStream = ({ onStream }) => {
 
     startStream(); // Start the camera stream when the component mounts
   }, [onStream]);
+  
 
   return null; // No need to render anything, as this component manages the stream.
 };
